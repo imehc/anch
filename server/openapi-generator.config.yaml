@@ -1,0 +1,13 @@
+inputSpec: openapi.yaml
+generatorName: go-server
+outputDir: ./generated
+globalProperties:
+  models: ""
+  apis: ""
+  supportingFiles: "routers.go,api.go,helpers.go,logger.go,error.go"
+additionalProperties:
+  packageName: api
+  enumClassPrefix: true
+  hideGenerationTimestamp: true
+  sourceFolder: ""
+  router: chi

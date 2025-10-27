@@ -1,0 +1,712 @@
+openapi: 3.1.0
+info:
+  title: Diary & Bill API
+  version: 1.0.0
+  description: API 服务，支持日记、多媒体文件、账单及统计。
+
+servers:
+  - url: http://localhost:6020/api
+    description: 本地开发环境
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Auth:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: 用于访问受保护资源的短期 token
+        refresh_token:
+          type: string
+          description: 用于刷新 access_token 的长期 token
+        token_type:
+          type: string
+          description: token 类型，一般为 "Bearer"
+          example: Bearer
+        expires_in:
+          type: integer
+          description: access_token 的有效期，单位秒
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - role
+        - status
+      properties:
+        id:
+          type: integer
+          description: 用户唯一 ID，用于系统内部标识
+        username:
+          type: string
+          description: 用户名或昵称，用于显示和登录
+        email:
+          type: string
+          description: 用户邮箱，用于通知和找回密码
+        phone:
+          type: string
+          description: 用户手机号，可选，用于验证和联系
+        avatar_url:
+          type: string
+          description: 用户头像 URL，用于前端展示
+        role:
+          type: string
+          enum: [admin, user, guest]
+          description: 用户角色，决定权限
+        status:
+          type: string
+          enum: [active, inactive, disabled]
+          description: 用户状态
+        disabled_reason:
+          type: string
+          description: 用户被禁用原因，仅当 status 为 disabled 时有值
+        disabled_at:
+          type: string
+          format: date-time
+          description: 用户被禁用时间，仅当 status 为 disabled 时有值
+        created_at:
+          type: string
+          format: date-time
+          description: 用户注册时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 用户信息最近更新时间
+
+    File:
+      type: object
+      required:
+        - id
+        - file_type
+        - file_url
+      properties:
+        id:
+          type: integer
+          description: 文件唯一 ID，用于关联和管理
+        file_type:
+          type: string
+          enum: [image, audio, video]
+          description: 文件类型，决定渲染和处理方式
+        file_url:
+          type: string
+          description: 文件访问 URL，用于前端下载或展示
+        created_at:
+          type: string
+          format: date-time
+          description: 文件上传时间，用于排序和管理
+
+    Amount:
+      type: object
+      required:
+        - original_amount
+      properties:
+        original_amount:
+          type: number
+          description: 原价金额，必填
+        discount_amount:
+          type: number
+          description: 优惠金额，可选，用于统计优惠
+        actual_amount:
+          type: number
+          description: 实付金额，自动计算 = 原价 - 优惠
+
+    Diary:
+      type: object
+      required:
+        - id
+        - content
+      properties:
+        id:
+          type: integer
+          description: 日记唯一 ID，用于查询和修改
+        content:
+          type: string
+          description: 日记文字内容，必填
+        mood:
+          type: integer
+          description: 情绪分数（1-5），用于统计情绪趋势
+        tags:
+          type: array
+          items:
+            type: string
+          description: 日记标签列表，用于搜索和过滤
+        related_bill_id:
+          type: integer
+          description: 关联账单 ID，可选
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+          description: 日记关联文件列表，可包含图片、音频或视频
+
+    DiaryCreate:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: 日记文字内容，必填
+        mood:
+          type: integer
+          description: 情绪分数（1-5），可选
+        tags:
+          type: array
+          items:
+            type: string
+          description: 日记标签列表，可选
+        related_bill_id:
+          type: integer
+          description: 关联账单 ID，可选
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+          description: 上传的文件列表，可选
+
+    Bill:
+      type: object
+      required:
+        - id
+        - amount
+        - payment_method
+      properties:
+        id:
+          type: integer
+          description: 账单唯一 ID，用于查询和修改
+        amount:
+          $ref: '#/components/schemas/Amount'
+          description: 账单金额信息
+        discount_type:
+          type: string
+          description: 优惠类型，如红包、积分、折扣等
+        payment_method:
+          type: string
+          description: 支付方式，例如微信、支付宝、银行卡
+        category:
+          type: string
+          description: 账单分类，如餐饮、交通、娱乐
+        notes:
+          type: string
+          description: 备注信息，可选
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+          description: 附加图片，可选
+        related_diary_id:
+          type: integer
+          description: 关联日记 ID，可选
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    BillCreate:
+      type: object
+      required:
+        - amount
+        - payment_method
+      properties:
+        amount:
+          $ref: '#/components/schemas/Amount'
+          description: 账单金额信息
+        discount_type:
+          type: string
+          description: 优惠类型，可选
+        payment_method:
+          type: string
+          description: 支付方式，必填
+        category:
+          type: string
+          description: 账单分类，可选
+        notes:
+          type: string
+          description: 备注信息，可选
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+          description: 附加图片，可选
+        related_diary_id:
+          type: integer
+          description: 关联日记 ID，可选
+
+    Stats:
+      type: object
+      required:
+        - month
+      properties:
+        month:
+          type: string
+          description: 月份，例如 2025-10
+        total_expense:
+          type: number
+          description: 总支出
+        total_income:
+          type: number
+          description: 总收入
+        total_discount:
+          type: number
+          description: 总优惠金额
+        expense_by_category:
+          type: object
+          additionalProperties:
+            type: number
+          description: 分类支出占比
+        discount_by_type:
+          type: object
+          additionalProperties:
+            type: number
+          description: 优惠类型占比
+        expense_trend:
+          type: array
+          items:
+            type: number
+          description: 实付 vs 原价趋势（折线图）
+        daily_expense_trend:
+          type: array
+          items:
+            type: number
+          description: 每日支出趋势（柱状图）
+        mood_expense_trend:
+          type: array
+          items:
+            type: number
+          description: 情绪趋势与支出趋势联动（双轴图）
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      operationId: login
+      summary: 用户登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: 用户名或邮箱
+                password:
+                  type: string
+                  description: 登录密码
+      responses:
+        '200':
+          description: 登录成功，返回 token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      operationId: getCurrentUser
+      summary: 获取当前用户信息
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 当前用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      operationId: refreshToken
+      summary: 刷新访问令牌
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: 刷新令牌
+      responses:
+        '200':
+          description: 刷新成功，返回新的 token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+
+  /diary:
+    post:
+      tags:
+        - Diary
+      operationId: createDiary
+      summary: 创建日记
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiaryCreate'
+      responses:
+        '201':
+          description: 日记创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diary'
+    get:
+      tags:
+        - Diary
+      operationId: listDiary
+      summary: 获取日记列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: tag
+          schema:
+            type: string
+          description: 按标签过滤日记，可选
+        - in: query
+          name: mood
+          schema:
+            type: integer
+          description: 按情绪分数过滤日记，可选
+      responses:
+        '200':
+          description: 日记列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Diary'
+
+  /diary/{id}:
+    get:
+      tags:
+        - Diary
+      operationId: getDiary
+      summary: 查询单条日记
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 日记 ID
+      responses:
+        '200':
+          description: 日记详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diary'
+    put:
+      tags:
+        - Diary
+      operationId: updateDiary
+      summary: 更新日记
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 日记 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiaryCreate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diary'
+    delete:
+      tags:
+        - Diary
+      operationId: deleteDiary
+      summary: 删除日记
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 日记 ID
+      responses:
+        '204':
+          description: 删除成功
+
+  /bill:
+    post:
+      tags:
+        - Bill
+      operationId: createBill
+      summary: 创建账单
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+    get:
+      tags:
+        - Bill
+      operationId: listBill
+      summary: 获取账单列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: 按分类过滤账单，可选
+        - in: query
+          name: payment_method
+          schema:
+            type: string
+          description: 按支付方式过滤账单，可选
+        - in: query
+          name: month
+          schema:
+            type: string
+          description: 按月份过滤账单，例如 2025-10，可选
+      responses:
+        '200':
+          description: 账单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bill'
+
+  /bill/{id}:
+    get:
+      tags:
+        - Bill
+      operationId: getBill
+      summary: 查询单条账单
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 账单 ID
+      responses:
+        '200':
+          description: 账单详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+    put:
+      tags:
+        - Bill
+      operationId: updateBill
+      summary: 更新账单
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 账单 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillCreate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+    delete:
+      tags:
+        - Bill
+      operationId: deleteBill
+      summary: 删除账单
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 账单 ID
+      responses:
+        '204':
+          description: 删除成功
+
+  /stats/monthly:
+    get:
+      tags:
+        - Stats
+      operationId: getMonthlyStats
+      summary: 获取月度统计
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+          description: 月份，例如 2025-10
+      responses:
+        '200':
+          description: 月度统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+
+  /stats/category:
+    get:
+      tags:
+        - Stats
+      operationId: getCategoryStats
+      summary: 获取分类支出占比
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+          description: 月份，例如 2025-10
+      responses:
+        '200':
+          description: 分类支出占比
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: number
+                description: key 为分类名称，value 为金额占比
+
+  /stats/discount:
+    get:
+      tags:
+        - Stats
+      operationId: getDiscountStats
+      summary: 获取优惠类型占比
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+          description: 月份，例如 2025-10
+      responses:
+        '200':
+          description: 优惠类型占比
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: number
+                description: key 为优惠类型，value 为金额占比
+
+  /stats/trend:
+    get:
+      tags:
+        - Stats
+      operationId: getTrendStats
+      summary: 获取每日支出和情绪趋势
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: string
+          description: 月份，例如 2025-10
+      responses:
+        '200':
+          description: 趋势数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'

@@ -1,0 +1,16 @@
+server:
+  host: localhost
+  port: 6020
+
+database:
+  host: localhost
+  port: 5432
+  user: admin
+  password: admin2025
+  dbname: anch
+  sslmode: disable
+
+jwt:
+  secret_key: hpD6FBUWHt64vD7TanQv
+  access_token_duration: 2h
+  refresh_token_duration: 168h  # 7 days
