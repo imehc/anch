@@ -20,7 +20,7 @@ help:
 
 ## gen-apis: 生成 API 代码
 gen-apis:
-	$(GENTOOL) generate -c openapi-generator.config.yaml
+	$(GENTOOL) generate -c openapi-generator.config.yaml # --ignore-file-override=.openapi-generator-ignore
 
 ## build: 编译项目
 build:

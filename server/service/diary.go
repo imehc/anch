@@ -67,15 +67,13 @@ func (s *DiaryService) ListDiary(ctx context.Context, tag string, mood int32) (a
 
 		// 获取文件列表
 		files, _ := s.diaryRepo.GetFiles(ctx, d.ID)
-		if files != nil {
-			for _, f := range files {
-				apiDiary.Files = append(apiDiary.Files, api.File{
-					Id:        int32(f.ID),
-					FileType:  f.FileType,
-					FileUrl:   f.FileURL,
-					CreatedAt: f.CreatedAt,
-				})
-			}
+		for _, f := range files {
+			apiDiary.Files = append(apiDiary.Files, api.File{
+				Id:        int32(f.ID),
+				FileType:  f.FileType,
+				FileUrl:   f.FileURL,
+				CreatedAt: f.CreatedAt,
+			})
 		}
 
 		apiDiaries = append(apiDiaries, apiDiary)
@@ -174,15 +172,13 @@ func (s *DiaryService) GetDiary(ctx context.Context, id int32) (api.ImplResponse
 
 	// 获取文件列表
 	files, _ := s.diaryRepo.GetFiles(ctx, diary.ID)
-	if files != nil {
-		for _, f := range files {
-			apiDiary.Files = append(apiDiary.Files, api.File{
-				Id:        int32(f.ID),
-				FileType:  f.FileType,
-				FileUrl:   f.FileURL,
-				CreatedAt: f.CreatedAt,
-			})
-		}
+	for _, f := range files {
+		apiDiary.Files = append(apiDiary.Files, api.File{
+			Id:        int32(f.ID),
+			FileType:  f.FileType,
+			FileUrl:   f.FileURL,
+			CreatedAt: f.CreatedAt,
+		})
 	}
 
 	return api.Response(http.StatusOK, apiDiary), nil

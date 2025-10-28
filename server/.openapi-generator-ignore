@@ -1,0 +1,4 @@
+# OpenAPI Generator Ignore File
+
+# 忽略所有 service 文件
+generated/api_*_service.go

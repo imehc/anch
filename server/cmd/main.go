@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 
 	"github.com/imehc/anch/config"
 	"github.com/imehc/anch/db"
@@ -93,43 +94,44 @@ func main() {
 	billAPI := api.NewBillAPIController(billService)
 	statsAPI := api.NewStatsAPIController(statsService)
 
-	// 创建路由
-	baseRouter := api.NewRouter(authAPI, diaryAPI, billAPI, statsAPI)
-
 	// 创建新的路由器以应用选择性中间件
 	router := chi.NewRouter()
+	router.Use(api.Logger) // 使用生成的 Logger 中间件
 
 	// 公开路由（不需要认证）
-	router.Post("/api/auth/login", authAPI.Login)
-	router.Post("/api/auth/refresh", authAPI.RefreshToken)
+	publicRoutes := []string{"Login", "RefreshToken"}
+	for _, route := range authAPI.OrderedRoutes() {
+		if slices.Contains(publicRoutes, route.Name) {
+			router.Method(route.Method, route.Pattern, route.HandlerFunc)
+		}
+	}
 
 	// 受保护的路由（需要认证）
 	router.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
-		r.Get("/api/auth/me", authAPI.GetCurrentUser)
+
+		// Auth protected routes
+		for _, route := range authAPI.OrderedRoutes() {
+			if !slices.Contains(publicRoutes, route.Name) {
+				r.Method(route.Method, route.Pattern, route.HandlerFunc)
+			}
+		}
 
 		// Diary routes
-		r.Get("/api/diary", diaryAPI.ListDiary)
-		r.Post("/api/diary", diaryAPI.CreateDiary)
-		r.Get("/api/diary/{id}", diaryAPI.GetDiary)
-		r.Put("/api/diary/{id}", diaryAPI.UpdateDiary)
-		r.Delete("/api/diary/{id}", diaryAPI.DeleteDiary)
+		for _, route := range diaryAPI.OrderedRoutes() {
+			r.Method(route.Method, route.Pattern, route.HandlerFunc)
+		}
 
 		// Bill routes
-		r.Get("/api/bill", billAPI.ListBill)
-		r.Post("/api/bill", billAPI.CreateBill)
-		r.Get("/api/bill/{id}", billAPI.GetBill)
-		r.Put("/api/bill/{id}", billAPI.UpdateBill)
-		r.Delete("/api/bill/{id}", billAPI.DeleteBill)
+		for _, route := range billAPI.OrderedRoutes() {
+			r.Method(route.Method, route.Pattern, route.HandlerFunc)
+		}
 
 		// Stats routes
-		r.Get("/api/stats/monthly", statsAPI.GetMonthlyStats)
-		r.Get("/api/stats/category", statsAPI.GetCategoryStats)
-		r.Get("/api/stats/discount", statsAPI.GetDiscountStats)
-		r.Get("/api/stats/trend", statsAPI.GetTrendStats)
+		for _, route := range statsAPI.OrderedRoutes() {
+			r.Method(route.Method, route.Pattern, route.HandlerFunc)
+		}
 	})
-
-	_ = baseRouter // Keep for reference
 
 	// 启动服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

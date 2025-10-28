@@ -115,15 +115,13 @@ func (s *BillService) GetBill(ctx context.Context, id int32) (api.ImplResponse, 
 
 	apiBill := s.convertToAPIBill(bill)
 	files, _ := s.billRepo.GetFiles(ctx, bill.ID)
-	if files != nil {
-		for _, f := range files {
-			apiBill.Images = append(apiBill.Images, api.File{
-				Id:        int32(f.ID),
-				FileType:  f.FileType,
-				FileUrl:   f.FileURL,
-				CreatedAt: f.CreatedAt,
-			})
-		}
+	for _, f := range files {
+		apiBill.Images = append(apiBill.Images, api.File{
+			Id:        int32(f.ID),
+			FileType:  f.FileType,
+			FileUrl:   f.FileURL,
+			CreatedAt: f.CreatedAt,
+		})
 	}
 
 	return api.Response(http.StatusOK, apiBill), nil

@@ -4,10 +4,12 @@ outputDir: ./generated
 globalProperties:
   models: ""
   apis: ""
-  supportingFiles: "routers.go,api.go,helpers.go,logger.go,error.go"
+  supportingFiles: "routers.go,api.go,helpers.go,logger.go,error.go,impl.go"
 additionalProperties:
   packageName: api
   enumClassPrefix: true
   hideGenerationTimestamp: true
   sourceFolder: ""
   router: chi
+  outputAsLibrary: true
+  onlyInterfaces: true
