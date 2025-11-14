@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="%paraglide.lang%">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	%sveltekit.head%
+	<script>
+		// 防止主题闪烁 - 在页面加载前立即应用主题
+		(function () {
+			const LIGHT_THEME = '%sveltekit.env.PUBLIC_LIGHT_THEME%';
+			const DARK_THEME = '%sveltekit.env.PUBLIC_DARK_THEME%';
+			const saved = localStorage.getItem('theme');
+			let theme;
+			if (saved) {
+				theme = saved;
+			} else {
+				const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				theme = isDark ? DARK_THEME : LIGHT_THEME;
+			}
+			document.documentElement.setAttribute('data-theme', theme);
+		})();
+	</script>
+</head>
+
+<body data-sveltekit-preload-data="hover">
+	<div style="display: contents">%sveltekit.body%</div>
+</body>
+
+</html>

@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+@plugin 'daisyui';
+
+/* View Transitions API 主题切换动画 */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
+/* 切换到暗色主题：圆形扩散 (新主题在上层扩散) */
+html[data-theme-transition='dark']::view-transition-old(root) {
+	z-index: 1;
+}
+
+html[data-theme-transition='dark']::view-transition-new(root) {
+	z-index: 999;
+	animation: scale-up 0.5s ease-in-out;
+}
+
+/* 切换到亮色主题：圆形收缩 (旧主题在上层收缩) */
+html[data-theme-transition='light']::view-transition-old(root) {
+	z-index: 999;
+	animation: scale-down 0.5s ease-in-out;
+}
+
+html[data-theme-transition='light']::view-transition-new(root) {
+	z-index: 1;
+}
+
+@keyframes scale-up {
+	from {
+		clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+	}
+	to {
+		clip-path: circle(var(--r, 150%) at var(--x, 50%) var(--y, 50%));
+	}
+}
+
+@keyframes scale-down {
+	from {
+		clip-path: circle(var(--r, 150%) at var(--x, 50%) var(--y, 50%));
+	}
+	to {
+		clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+	}
+}
